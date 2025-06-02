@@ -70,6 +70,7 @@ const loginUser = async (req, res) => {
                 message: "User not found"
             });
         }
+
         // check if password is correct
         const isPasswordCorrect = await bcrypt.compare(password, existingUser.password)
         if (!isPasswordCorrect) {
@@ -78,7 +79,6 @@ const loginUser = async (req, res) => {
                 message: "Invalid credentials"
             });
         }
-        // if everything is correct, return user data
 
         // create user token
         const accessToken = jwt.sign({
@@ -110,7 +110,36 @@ const changePassword = async (req, res) => {
         // extract old and new password
         const { oldPassword, newPassword } = req.body;
 
-        const user = await User.findById()
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Error! User not found"
+            })
+        }
+
+        // check if old password is correct
+        const isPasswordCorrect = await bcrypt.compare(oldPassword, user.password)
+        if (!isPasswordCorrect) {
+            return res.status(400).json({
+                success: false,
+                message: "Error! Invalid credentials"
+            });
+        }
+        // hash user password
+        const salt = await bcrypt.genSalt(10);
+        const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password = hashedNewPassword;
+        await user.save();
+
+        return res.status(201).json({
+            success: true,
+            message: "Password changed successfully"
+        })
+
+
     } catch (e) {
         console.error("Error in loginUser:", e.message);
         return res.status(500).json({
@@ -122,5 +151,6 @@ const changePassword = async (req, res) => {
 
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    changePassword
 };
